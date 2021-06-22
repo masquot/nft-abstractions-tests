@@ -1,7 +1,7 @@
--- first test: bored ape yacht club
--- contract: '\xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d'
--- transaction for https://opensea.io/assets/0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d/3353
--- https://etherscan.io/tx/0x25ddf7c03a3bf193b13f633e93dd6d2a1a3df942b76a3aa19bc3887ff1125e56#eventlog
+-- Tests of individual transactions: see https://github.com/masquot/nfts-research-dune/blob/main/projects/open-sea.md
+--
+-- :todo: Issue to be resolved later -> not all currencies supported by OpenSea are available in Dune `erc20.tokens` and `prices.usd` tables. See here:
+-- https://duneanalytics.com/queries/66344
 WITH wyvern_calldata AS (
     SELECT
         call_tx_hash,
@@ -9,7 +9,16 @@ WITH wyvern_calldata AS (
             WHEN addrs [7] = '\x0000000000000000000000000000000000000000' THEN '\xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
             ELSE addrs [7]
         END AS currency_token,
-        addrs [5] AS contract_address
+        addrs [5] AS contract_address,
+        CAST(
+            bytea2numericpy(
+                substring(
+                    "calldataBuy"
+                    FROM
+                        69 FOR 32
+                )
+            ) AS NUMERIC
+        ) AS token_id
     FROM
         opensea."WyvernExchange_call_atomicMatch_"
     WHERE
@@ -25,22 +34,24 @@ SELECT
     -- "evt_block_number",
     wc.contract_address AS contract_address,
     labels.get(wc.contract_address, 'owner', 'project'),
-    "tokenId" AS token_id,
+    token_id,
     "maker" AS "from",
     "taker" AS "to",
     "price" / 10 ^ 18 AS price,
     -- :todo: units
     currency_token AS currency,
-    erc20.symbol -- unused fields: "evt_index", "evt_tx_hash", "metadata", "sellHash", "buyHash",
+    erc20.symbol
 FROM
-    -- :todo: be careful with INNER JOINS - do tests
     opensea."WyvernExchange_evt_OrdersMatched" opensea
-    INNER JOIN erc721."ERC721_evt_Transfer" erc721 ON erc721.evt_tx_hash = opensea.evt_tx_hash
-    INNER JOIN wyvern_calldata wc ON wc.call_tx_hash = opensea.evt_tx_hash
-    INNER JOIN erc20.tokens erc20 ON erc20.contract_address = wc.currency_token
--- WHERE
---     erc20.symbol <> 'WETH' -- for testing
-    --    taker = '\x9a8721a9d73ab3768b268e525455d6378cb3eb48'
+    LEFT JOIN wyvern_calldata wc ON wc.call_tx_hash = opensea.evt_tx_hash
+    LEFT JOIN erc20.tokens erc20 ON erc20.contract_address = wc.currency_token
+WHERE
+    -- for testing
+    opensea."evt_tx_hash" IN (
+        '\x25ddf7c03a3bf193b13f633e93dd6d2a1a3df942b76a3aa19bc3887ff1125e56',
+        '\xdcf4809b4662c4a04709cee96f50515b13999810dd86dfa1a54371387e491f04',
+        '\x6b67140d550d574cba84772349a134d9055aa895bc8ad359e7754439f4c23894'
+    )
 ORDER BY
     opensea."evt_block_number" DESC
 LIMIT

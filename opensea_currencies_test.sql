@@ -18,7 +18,6 @@ SELECT
     p.decimals,
     COUNT(*)
 FROM
-    -- :todo: be careful with INNER JOINS - do tests
     opensea."WyvernExchange_evt_OrdersMatched" opensea
     LEFT JOIN wyvern_calldata wc ON wc.call_tx_hash = opensea.evt_tx_hash
     LEFT JOIN erc20.tokens erc20 ON erc20.contract_address = wc.currency_token
