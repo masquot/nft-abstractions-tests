@@ -1,4 +1,7 @@
 -- notes
+-- input from:
+-- https://raw.githubusercontent.com/vasa-develop/nft-tokenlist/master/trimmed_3300_nfts.tokenlist.json
+--
 -- 1. `name` is a non-reserved SQL keyword
 -- See https://www.postgresql.org/docs/8.1/sql-keywords-appendix.html
 --
@@ -7,7 +10,7 @@
 -- $
 -- emoji 
 CREATE TABLE IF NOT EXISTS nft.tokens (
-	contract_address bytea UNIQUE,
+	contract_address bytea PRIMARY KEY,
     name text,
 	symbol text,
     standard text
@@ -139,7 +142,6 @@ COPY nft.tokens (contract_address, name, symbol, standard) FROM stdin;
 \\x7cdc0421469398e0f3aa8890693d86c840ac8931	DokiDoki Degacha Collection	MOMIJI	erc1155
 \\xb32979486938aa9694bfc898f35dbed459f44424	Nyan Cat (Official)	NYAN	erc1155
 \\xe7afb4189603a901b74f8085f775931a60996166	eBoy Blockbob	BLOB	erc1155
-\\x2998d346c66259e3e73dd7410899948371a28e94	Unique One Multiple	UNE	erc1155
 \\xd227df494367a8b769b4bf2bbebd0388a8758741	Degen'$ Farm	CREAT	erc721
 \\x1e4f8365ebfc13702dd767ef4889fbfda4c0a43d	Battle Racers		erc20
 \\x8b459723c519c66ebf95b4f643ba4aa0f9b0e925	YFU Cards	YFUC	erc1155
@@ -548,6 +550,16 @@ COPY nft.tokens (contract_address, name, symbol, standard) FROM stdin;
 
 COMMIT;
 
--- :todo:
-CREATE INDEX IF NOT EXISTS tokens_contract_address_name_idx ON nft.tokens USING btree (contract_address) INCLUDE (name);
-CREATE INDEX IF NOT EXISTS tokens_symbol_decimals_idx ON nft.tokens USING btree (symbol) INCLUDE (decimals);
+-- expectation how this table will be used most of the time:
+-- As part of a JOIN operation using 'contract_address' as join key to get entries for columns 'name' or 'standard'
+CREATE INDEX IF NOT EXISTS tokens_contract_address_name_idx ON nft.tokens (contract_address, name)
+CREATE INDEX IF NOT EXISTS tokens_contract_address_standard_idx ON nft.tokens (contract_address, standard)
+
+-- SEE BELOW ALTERNATIVE OPTION for indexes 
+-- Because the column 'name' is text of variable length, this is risky 
+-- especially if new additions to this table are added via pull requests .
+-- from https://www.postgresql.org/docs/13/sql-createindex.html :
+-- "It's wise to be conservative about adding non-key columns to an index, especially wide columns.
+-- If an index tuple exceeds the maximum size allowed for the index type, data insertion will fail.""
+-- CREATE INDEX IF NOT EXISTS tokens_contract_address_name_idx ON nft.tokens USING btree (contract_address) INCLUDE (name);
+-- CREATE INDEX IF NOT EXISTS tokens_contract_address_standard_idx ON nft.tokens USING btree (contract_address) INCLUDE (standard);
