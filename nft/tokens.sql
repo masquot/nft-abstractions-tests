@@ -11,9 +11,9 @@
 -- emoji 
 CREATE TABLE IF NOT EXISTS nft.tokens (
 	contract_address bytea PRIMARY KEY,
-    name text,
+	name text,
 	symbol text,
-    standard text
+	standard text
 );
 
 BEGIN;
@@ -552,8 +552,8 @@ COMMIT;
 
 -- expectation how this table will be used most of the time:
 -- As part of a JOIN operation using 'contract_address' as join key to get entries for columns 'name' or 'standard'
-CREATE INDEX IF NOT EXISTS tokens_contract_address_name_idx ON nft.tokens (contract_address, name);
-CREATE INDEX IF NOT EXISTS tokens_contract_address_standard_idx ON nft.tokens (contract_address, standard);
+CREATE INDEX IF NOT EXISTS nft_tokens_contract_address_name_idx ON nft.tokens (contract_address, name);
+CREATE INDEX IF NOT EXISTS nft_tokens_contract_address_standard_idx ON nft.tokens (contract_address, standard);
 
 -- SEE BELOW ALTERNATIVE OPTION for indexes 
 -- Because the column 'name' is text of variable length, this is risky 
