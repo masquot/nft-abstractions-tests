@@ -1,35 +1,9 @@
-CREATE OR REPLACE FUNCTION nft.insert_opensea(start_ts timestamptz, end_ts timestamptz=now(), start_block numeric=0, end_block numeric=9e18) RETURNS integer
+CREATE OR REPLACE FUNCTION nft.insert_cryptopunks(start_ts timestamptz, end_ts timestamptz=now(), start_block numeric=0, end_block numeric=9e18) RETURNS integer
 LANGUAGE plpgsql AS $function$
 DECLARE r integer;
 BEGIN
 
-WITH wyvern_calldata AS (
-    SELECT
-        call_tx_hash,
-        addrs [5] AS nft_contract_address,
-        addrs [2] AS buyer,
-        addrs [9] AS seller,
-        addrs [7] AS original_currency_address,
-        CASE
-            WHEN addrs [7] = '\x0000000000000000000000000000000000000000' THEN '\xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
-            ELSE addrs [7]
-        END AS currency_token,
-        CAST(
-            bytea2numericpy(
-                substring(
-                    "calldataBuy"
-                    FROM
-                        69 FOR 32
-                )
-            ) AS TEXT
-        ) AS token_id,
-        call_trace_address
-    FROM
-        opensea."WyvernExchange_call_atomicMatch_"
-    WHERE
-        "call_success"
-),
-rows AS (
+WITH rows AS (
     INSERT INTO nft.trades (
 	block_time,
 	nft_project_name,
@@ -59,52 +33,42 @@ rows AS (
 
     SELECT
         trades.evt_block_time AS block_time,
-        labels.get(wc.nft_contract_address, 'owner', 'project') AS nft_project_name, -- :todo: nft.name
-        token_id AS nft_token_id,
-        'OpenSea' AS platform,
+        'CryptoPunks' AS nft_project_name,
+        trades."punkIndex" AS nft_token_id,
+        'LarvaLabs Contract' AS platform,
         '1' AS platform_version,
         'Buy' AS category,
         'Trade' AS evt_type,
-        trades.price / 10 ^ erc20.decimals * p.price AS usd_amount,
-        wc.seller,
-        wc.buyer,
-        trades.price / 10 ^ erc20.decimals AS original_amount,
-        trades.price AS original_amount_raw,
-        CASE WHEN wc.original_currency_address = '\x0000000000000000000000000000000000000000' THEN 'ETH' ELSE erc20.symbol END AS original_currency,
-        wc.original_currency_address AS original_currency_contract,
-        wc.currency_token AS currency_contract,
-        wc.nft_contract_address AS nft_contract_address,
+        trades.value / 10 ^ 18 * p.price AS usd_amount,
+        trades."fromAddress" AS seller,
+        trades."toAddress" AS buyer,
+        trades.value / 10 ^ 18 AS original_amount,
+        trades.value AS original_amount_raw,
+        'ETH' AS original_currency,
+        '\x0000000000000000000000000000000000000000' AS original_currency_contract,
+        '\xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'::bytea AS currency_contract,
+        trades.contract_address AS nft_contract_address,
         trades.contract_address AS exchange_contract_address,
         trades.evt_tx_hash AS tx_hash,
-        trades.evt_block_number,
+        trades.evt_block_number AS block_number,
         tx."from" AS tx_from,
         tx."to" AS tx_to,
-        call_trace_address AS trace_address,
+        NULL::integer[] AS trace_address,
         trades.evt_index,
         row_number() OVER (PARTITION BY 4, 18, 23, 6) AS trade_id -- :todo: :peer-review: (PARTITION BY platform, tx_hash, evt_index, category)
     FROM
-        opensea."WyvernExchange_evt_OrdersMatched" trades
+        cryptopunks."CryptoPunksMarket_evt_PunkBought" trades
     INNER JOIN ethereum.transactions tx
         ON trades.evt_tx_hash = tx.hash
         AND tx.block_time >= start_ts
         AND tx.block_time < end_ts
         AND tx.block_number >= start_block
         AND tx.block_number < end_block
-    LEFT JOIN wyvern_calldata wc ON wc.call_tx_hash = trades.evt_tx_hash
     LEFT JOIN prices.usd p ON p.minute = date_trunc('minute', trades.evt_block_time)
-        AND p.contract_address = wc.currency_token
+        AND p.contract_address = '\xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
         AND p.minute >= start_ts
         AND p.minute < end_ts
-    LEFT JOIN erc20.tokens erc20 ON erc20.contract_address = wc.currency_token
-    WHERE
-        wc.call_tx_hash IN (
-            '\x90c80aec81e25488aa86eea39c96e69ae0a7d6a4a63aaabe9f3f1a8a4239e18e',
-            '\x30c850bc919390435f53980cbce75332b2c40b35dc21f8b74e07903a2abc181d',
-            '\x805935fb7ecdd586e52fefa71770eb473f7fd5944a1777001b60c1f67a4a2b08',
-            '\xdea0edbf7f4b2ec73db8810b29059b3df93180d58ec899446a67bb587efe6e60',
-            '\x25ddf7c03a3bf193b13f633e93dd6d2a1a3df942b76a3aa19bc3887ff1125e56'
-        )
-        AND trades.evt_block_time >= start_ts
+    WHERE trades.evt_block_time >= start_ts
         AND trades.evt_block_time < end_ts
     ON CONFLICT DO NOTHING
     RETURNING 1
@@ -114,8 +78,23 @@ RETURN r;
 END
 $function$;
 
+-- fill 2017
+SELECT nft.insert_cryptopunks(
+    '2017-01-01',
+    '2018-01-01',
+    (SELECT max(number) FROM ethereum.blocks WHERE time < '2017-01-01'),
+    (SELECT max(number) FROM ethereum.blocks WHERE time <= '2018-01-01')
+)
+WHERE NOT EXISTS (
+    SELECT *
+    FROM nft.trades
+    WHERE block_time > '2017-01-01'
+    AND block_time <= '2018-01-01'
+    AND platform = 'CryptoPunks'
+);
+
 -- fill 2018
-SELECT nft.insert_opensea(
+SELECT nft.insert_cryptopunks(
     '2018-01-01',
     '2019-01-01',
     (SELECT max(number) FROM ethereum.blocks WHERE time < '2018-01-01'),
@@ -126,11 +105,11 @@ WHERE NOT EXISTS (
     FROM nft.trades
     WHERE block_time > '2018-01-01'
     AND block_time <= '2019-01-01'
-    AND platform = 'OpenSea'
+    AND platform = 'CryptoPunks'
 );
 
 -- fill 2019
-SELECT nft.insert_opensea(
+SELECT nft.insert_cryptopunks(
     '2019-01-01',
     '2020-01-01',
     (SELECT max(number) FROM ethereum.blocks WHERE time < '2019-01-01'),
@@ -141,12 +120,12 @@ WHERE NOT EXISTS (
     FROM nft.trades
     WHERE block_time > '2019-01-01'
     AND block_time <= '2020-01-01'
-    AND platform = 'OpenSea'
+    AND platform = 'CryptoPunks'
 );
 
 
 -- fill 2020
-SELECT nft.insert_opensea(
+SELECT nft.insert_cryptopunks(
     '2020-01-01',
     '2021-01-01',
     (SELECT max(number) FROM ethereum.blocks WHERE time < '2020-01-01'),
@@ -157,11 +136,11 @@ WHERE NOT EXISTS (
     FROM nft.trades
     WHERE block_time > '2020-01-01'
     AND block_time <= '2021-01-01'
-    AND platform = 'OpenSea'
+    AND platform = 'CryptoPunks'
 );
 
 -- fill 2021
-SELECT nft.insert_opensea(
+SELECT nft.insert_cryptopunks(
     '2021-01-01',
     now(),
     (SELECT max(number) FROM ethereum.blocks WHERE time < '2021-01-01'),
@@ -172,15 +151,15 @@ WHERE NOT EXISTS (
     FROM nft.trades
     WHERE block_time > '2021-01-01'
     AND block_time <= now() - interval '20 minutes'
-    AND platform = 'OpenSea'
+    AND platform = 'CryptoPunks'
 );
 
 INSERT INTO cron.job (schedule, command)
 VALUES ('53 * * * *', $$
-    SELECT nft.insert_opensea(
-        (SELECT max(block_time) - interval '1 days' FROM nft.trades WHERE platform='OpenSea'),
+    SELECT nft.insert_cryptopunks(
+        (SELECT max(block_time) - interval '1 days' FROM nft.trades WHERE platform='CryptoPunks'),
         (SELECT now() - interval '20 minutes'),
-        (SELECT max(number) FROM ethereum.blocks WHERE time < (SELECT max(block_time) - interval '1 days' FROM nft.trades WHERE platform='OpenSea')),
+        (SELECT max(number) FROM ethereum.blocks WHERE time < (SELECT max(block_time) - interval '1 days' FROM nft.trades WHERE platform='CryptoPunks')),
         (SELECT MAX(number) FROM ethereum.blocks where time < now() - interval '20 minutes'));
 $$)
 ON CONFLICT (command) DO UPDATE SET schedule=EXCLUDED.schedule;
