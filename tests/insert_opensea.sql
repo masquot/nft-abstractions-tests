@@ -2,7 +2,7 @@
 WITH wyvern_calldata AS (
     SELECT
         call_tx_hash,
-        addrs [5] AS contract_address,
+        addrs [5] AS nft_contract_address,
         addrs [2] AS buyer,
         addrs [9] AS seller,
         addrs [7] AS original_currency_address,
@@ -26,24 +26,24 @@ WITH wyvern_calldata AS (
         "call_success"
 )
 SELECT
-    opensea.evt_block_time,
-    labels.get(wc.contract_address, 'owner', 'project') AS nft_project_name,
+    opensea.evt_block_time AS block_time,
+    labels.get(wc.nft_contract_address, 'owner', 'project') AS nft_project_name, -- :todo: nft.name
     token_id AS nft_token_id,
     'OpenSea' AS platform,
     '1' AS platform_version,
-    'buy' AS category,
-    'direct_sale' AS evt_type,
+    'Buy' AS category,
+    'Trade' AS evt_type,
     opensea.price / 10 ^ erc20.decimals * p.price AS usd_amount,
-    --    p.price AS currency_fx_rate,
     wc.seller,
     wc.buyer,
     opensea.price / 10 ^ erc20.decimals AS original_amount,
     opensea.price AS original_amount_raw,
-    erc20.symbol AS original_currency,
-    currency_token AS original_currency_contract,
-    wc.contract_address AS nft_contract_address,
+    CASE WHEN wc.original_currency_address = '\x0000000000000000000000000000000000000000' THEN 'ETH' ELSE erc20.symbol END AS original_currency,
+    wc.original_currency_address AS original_currency_contract,
+    wc.currency_token AS currency_contract,
+    wc.nft_contract_address AS nft_contract_address,
     opensea.contract_address AS exchange_contract_address,
-    opensea.evt_tx_hash,
+    opensea.evt_tx_hash AS tx_hash,
     opensea.evt_block_number,
     tx."from" AS tx_from,
     tx."to" AS tx_to,

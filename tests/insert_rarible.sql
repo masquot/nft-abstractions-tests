@@ -157,7 +157,6 @@ SELECT
     a.category,
     a.evt_type,
     a.original_amount_raw / 10 ^ erc20.decimals * p.price AS usd_amount,
-    --    p.price AS currency_fx_rate,
     a.seller,
     a.buyer,
     a.original_amount_raw / 10 ^ erc20.decimals AS original_amount,

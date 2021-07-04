@@ -36,7 +36,9 @@ COPY nft.tokens (contract_address, name, symbol, standard) FROM stdin;
 \\xf17131a4c85e8a75ba52b3f91ce8c32f6f163924	The Sandbox	SAND	erc721
 \\x5ab21ec0bfa0b29545230395e3adaca7d552c948	PUNKS Comic	COMIC	erc721
 \\xf78296dfcf01a2612c2c847f68ad925801eeed80	My Fucking Pickle	FUCKINGPICKLES	erc721
-\\x8c9f364bf7a56ed058fc63ef81c6cf09c833e656	SuperRare		unknown
+\\x8c9f364bf7a56ed058fc63ef81c6cf09c833e656	SuperRare		
+\\xb932a70a57673d89f4acffbe830e8ed7f75fb9e0	SuperRare	SUPR	erc721
+\\x41a322b28d0ff354040e2cbc676f0320d8c8850d	SupeRare	SUPR	erc721
 \\xbfcd68ded9d511a632d45333155350a1907d4977	BoredNessApeClub	BNAC	erc721
 \\x11bdfb09bebf4f0ab66dd1d6b85d0ef58ef1ba6c	MakersPlace	MKT	erc721
 \\x17acddb7053be19e852e64dc5a344b599756f557	F1® Delta Time	F1DT.LCK	erc20
