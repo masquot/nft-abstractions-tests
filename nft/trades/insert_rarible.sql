@@ -9,14 +9,14 @@ WITH all_data AS (
     SELECT
         'Rarible' as platform,
         '1' as platform_version,
-        '\xf2ee97405593bc7b6275682b0331169a48fedec7' AS exchange_contract_address,
+        '\xf2ee97405593bc7b6275682b0331169a48fedec7'::bytea AS exchange_contract_address,
         'Trade' as evt_type,
         evt_tx_hash,
         evt_block_time,
         evt_block_number,
         evt_index,
         token AS nft_contract_address,
-        "tokenId" AS nft_token_id,
+        CAST("tokenId" AS TEXT) AS nft_token_id,
         seller,
         buyer,
         price AS original_amount_raw, -- including decimals
@@ -36,7 +36,7 @@ WITH all_data AS (
         evt_block_number,
         evt_index,
         token,
-        "tokenId",
+        CAST("tokenId" AS TEXT),
         owner,
         buyer,
         price*value, -- including decimals
@@ -56,7 +56,7 @@ WITH all_data AS (
         evt_block_number,
         evt_index,
         token,
-        "tokenId",
+        CAST("tokenId" AS TEXT),
         seller,
         buyer,
         price, -- including decimals
@@ -76,7 +76,7 @@ WITH all_data AS (
         evt_block_number,
         evt_index,
         token,
-        "tokenId",
+        CAST("tokenId" AS TEXT),
         seller,
         buyer,
         price, -- including decimals
@@ -96,7 +96,7 @@ WITH all_data AS (
         evt_block_number,
         evt_index,
         token,
-        "tokenId",
+        CAST("tokenId" AS TEXT),
         owner,
         buyer,
         price, -- including decimals
@@ -116,7 +116,7 @@ WITH all_data AS (
         evt_block_number,
         evt_index,
         "sellToken", -- :todo:
-        "sellTokenId",
+        CAST("sellTokenId" AS TEXT),
         owner,
         buyer,
         "buyValue" * amount / "sellValue", -- :todo:
@@ -140,7 +140,7 @@ WITH all_data AS (
         evt_block_number,
         evt_index,
         "buyToken",
-        "buyTokenId",
+        CAST( "buyTokenId" AS TEXT),
         buyer AS seller,
         owner AS buyer,
         amount,
@@ -152,6 +152,80 @@ WITH all_data AS (
         'ExchangeV1_evt_Buy' as category
     FROM rarible."ExchangeV1_evt_Buy"
     where "sellTokenId" = 0 
+    UNION ALL
+-- from 2021-06-15 onwards
+-- 'Purchases' in ETH
+    SELECT
+        'Rarible' as platform,
+        '2' as platform_version,
+        contract_address AS exchange_contract_address,
+        'Trade' as evt_type,
+        tx_hash AS evt_tx_hash,
+        block_time AS evt_block_time,
+        block_number AS evt_block_number,
+        "index" AS evt_index,
+        substring(data FROM 365 FOR 20) AS nft_contract_address,
+        CAST(bytea2numericpy(substring(data FROM 385 FOR 32)) AS TEXT) AS nft_token_id,
+        substring(data FROM 77 FOR 20) AS seller,
+        substring(data FROM 109 FOR 20) AS buyer,
+        bytea2numericpy(substring(data FROM 129 FOR 32)) original_amount_raw,
+        '\x0000000000000000000000000000000000000000'::bytea as original_currency_contract,
+        '\xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'::bytea as currency_contract,
+        'Buy' AS category -- 'Purchase'
+    FROM ethereum."logs" 
+    WHERE "contract_address" = '\x9757f2d2b135150bbeb65308d4a91804107cd8d6' 
+    AND topic1 = '\x268820db288a211986b26a8fda86b1e0046281b21206936bb0e61c67b5c79ef4'
+    AND length(data) = 512
+UNION ALL
+-- from 2021-06-15 onwards
+-- 'Bid Accepted' non-ETH
+    SELECT
+        'Rarible' as platform,
+        '2' as platform_version,
+        contract_address AS exchange_contract_address,
+        'Trade' as evt_type,
+         tx_hash AS evt_tx_hash,
+        block_time AS evt_block_time,
+        block_number AS evt_block_number,
+        "index" AS evt_index,
+        substring(data FROM 493 FOR 20) AS nft_contract_address, -- different !
+        CAST(bytea2numericpy(substring(data FROM 513 FOR 32)) AS TEXT) AS nft_token_id, -- different !
+        substring(data FROM 109 FOR 20) AS seller,
+        substring(data FROM 77 FOR 20) AS buyer,
+        bytea2numericpy(substring(data FROM 161 FOR 32)) AS original_amount_raw,
+        substring(data FROM 365 FOR 20) AS original_currency_contract,
+        substring(data FROM 365 FOR 20) AS currency_contract,
+        'Offer Accepted' AS category -- 'Bid Accepted'
+    FROM ethereum."logs"
+    WHERE "contract_address" = '\x9757f2d2b135150bbeb65308d4a91804107cd8d6'
+    AND topic1 = '\x268820db288a211986b26a8fda86b1e0046281b21206936bb0e61c67b5c79ef4'
+    AND length(data) = 544
+    AND bytea2numericpy(substring(data FROM 225 FOR 32)) = 384
+UNION ALL
+-- from 2021-06-15 onwards
+-- 'Purchases' in non-ETH currencies
+    SELECT
+        'Rarible' as platform,
+        '2' as platform_version,
+        contract_address AS exchange_contract_address,
+        'Trade' as evt_type,
+        tx_hash AS evt_tx_hash,
+        block_time AS evt_block_time,
+        block_number AS evt_block_number,
+        "index" AS evt_index,
+        substring(data FROM 365 FOR 20) AS nft_contract_address, -- different !
+        CAST(bytea2numericpy(substring(data FROM 385 FOR 32)) AS TEXT) AS nft_token_id, -- different !
+        substring(data FROM 77 FOR 20) AS seller,
+        substring(data FROM 109 FOR 20) AS buyer,
+        bytea2numericpy(substring(data FROM 129 FOR 32)) AS original_amount_raw,
+        substring(data FROM 525 FOR 20) AS original_currency_contract,
+        substring(data FROM 525 FOR 20) AS currency_contract,
+        'Buy' AS category -- 'Bid Accepted'
+    FROM ethereum."logs"
+    WHERE "contract_address" = '\x9757f2d2b135150bbeb65308d4a91804107cd8d6'
+    AND topic1 = '\x268820db288a211986b26a8fda86b1e0046281b21206936bb0e61c67b5c79ef4'
+    AND length(data) = 544
+    AND bytea2numericpy(substring(data FROM 225 FOR 32)) = 416
 ),
 rows AS (
     INSERT INTO nft.trades (
