@@ -3,14 +3,12 @@ LANGUAGE plpgsql AS $function$
 DECLARE r integer;
 BEGIN
 
-WITH all_trades AS ( --https://etherscan.io/tx/0xa2c07597bb4350d1084e78c62059d30f2179d58eade0cb0612da4ffb0251d2bb
+WITH all_trades AS (
     SELECT
         tx_hash,
         block_time,
         CAST(bytea2numericpy(substring(data FROM 33)) as TEXT) AS token_id,
-        CAST(substring(topic3 FROM 13) as TEXT) as "from",
-        CAST(substring(topic4 FROM 13) as TEXT) as "to",
-        bytea2numericpy(substring(data FOR 32)) original_amount_raw,
+        bytea2numericpy(substring(data FOR 32)) AS original_amount_raw,
         '2' as platform_version,
         contract_address AS exchange_contract_address,
         block_number,
@@ -23,13 +21,11 @@ WITH all_trades AS ( --https://etherscan.io/tx/0xa2c07597bb4350d1084e78c62059d30
     AND
         topic1 = '\x5764dbcef91eb6f946584f4ea671217c686fa7e858ce4f9f42d08422b86556a9'
 UNION ALL
-    SELECT   -- https://etherscan.io/tx/0x1acb61634e16bbbc94524dcc523ccd15137e6fd97a28993126354dce146cd310
+    SELECT
         tx_hash,
         block_time,
         CAST(bytea2numericpy(topic4) as TEXT) AS token_id,
-        CAST(substring(topic2 FROM 13) as TEXT) as "from",
-        CAST(substring(topic3 FROM 13) as TEXT) as "to",
-        bytea2numericpy(substring(data FOR 32)) original_amount_raw,
+        bytea2numericpy(substring(data FOR 32)) AS original_amount_raw,
         '1' as platform_version,
         contract_address,
         block_number,
@@ -42,13 +38,11 @@ UNION ALL
     AND
         topic1 = '\x16dd16959a056953a63cf14bf427881e762e54f03d86b864efea8238dd3b822f'
 UNION ALL
-    SELECT   -- https://etherscan.io/tx/0x0ea7893c43530ab7e5946a17236fc53730e3d11e10c9922e05ac2d1b15bebf92
+    SELECT
         tx_hash,
         block_time,
         CAST(bytea2numericpy(substring(data FROM 33)) as TEXT) AS token_id,
-        CAST(substring(topic3 FROM 13) as TEXT) as "from",
-        CAST(substring(topic4 FROM 13) as TEXT) as "to",
-        bytea2numericpy(substring(data FOR 32)) original_amount_raw,
+        bytea2numericpy(substring(data FOR 32)) AS original_amount_raw,
         '2' as platform_version,
         contract_address,
         block_number,
@@ -65,9 +59,7 @@ UNION ALL
         tx_hash,
         block_time,
         CAST(bytea2numericpy(substring(data FROM 33)) as TEXT) AS token_id,
-        CAST(substring(topic3 FROM 13) as TEXT) as "from",
-        CAST(substring(topic4 FROM 13) as TEXT) as "to",
-        bytea2numericpy(substring(data FOR 32)) original_amount_raw,
+        bytea2numericpy(substring(data FOR 32)) AS original_amount_raw,
         '2' as platform_version,
         contract_address,
         block_number,
@@ -80,13 +72,11 @@ UNION ALL
     AND
         topic1 = '\x2a9d06eec42acd217a17785dbec90b8b4f01a93ecd8c127edd36bfccf239f8b6'
 UNION ALL
-    SELECT   -- https://etherscan.io/tx/0x548d6a9d3b64e8012578435fc84f4b1f18e8ab2759a5d4a1d8d5fdbfc5b4e828
+    SELECT
         tx_hash,
         block_time,
         CAST(bytea2numericpy(topic4) as TEXT) AS token_id,
-        CAST(substring(topic2 FROM 13) as TEXT) as "from",
-        CAST(substring(topic3 FROM 13) as TEXT) as "to",
-        bytea2numericpy(substring(data FOR 32)) original_amount_raw,
+        bytea2numericpy(substring(data FOR 32)) AS original_amount_raw,
         '1' as platform_version,
         contract_address,
         block_number,
@@ -99,13 +89,11 @@ UNION ALL
     AND
         topic1 = '\xd6deddb2e105b46d4644d24aac8c58493a0f107e7973b2fe8d8fa7931a2912be'
 UNION ALL
-    SELECT    -- https://etherscan.io/tx/0xeae8d230cd5ce305f6af3f7a5ce00586560092124c80a8c90f086ac9fc6c343c
+    SELECT
         tx_hash,
         block_time,
         CAST(bytea2numericpy(substring(data FROM 33)) as TEXT) AS token_id,
-        CAST(substring(topic3 FROM 13) as TEXT) as "from",
-        CAST(substring(topic4 FROM 13) as TEXT) as "to",
-        bytea2numericpy(substring(data FOR 32)) original_amount_raw,
+        bytea2numericpy(substring(data FOR 32)) AS original_amount_raw,
         '2' as platform_version,
         contract_address,
         block_number,
@@ -122,9 +110,7 @@ UNION ALL
         tx_hash,
         block_time,
         CAST(bytea2numericpy(topic4) as TEXT) AS token_id,
-        CAST(substring(topic3 FROM 13) as TEXT) as "from",
-        CAST(substring(data FROM 13 FOR 20) as TEXT) as "to",
-        bytea2numericpy(substring(data FROM 33 FOR 32)) original_amount_raw,
+        bytea2numericpy(substring(data FROM 33 FOR 32)) AS original_amount_raw,
         '2' as platform_version,
         contract_address,
         block_number,

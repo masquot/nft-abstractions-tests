@@ -96,14 +96,9 @@ rows AS (
         AND p.minute >= start_ts
         AND p.minute < end_ts
     LEFT JOIN erc20.tokens erc20 ON erc20.contract_address = wc.currency_token
+    LEFT JOIN erc721."ERC721_evt_Transfer" erc721 ON trades.evt_tx_hash = erc721.evt_tx_hash
     WHERE
-        wc.call_tx_hash IN (
-            '\x90c80aec81e25488aa86eea39c96e69ae0a7d6a4a63aaabe9f3f1a8a4239e18e',
-            '\x30c850bc919390435f53980cbce75332b2c40b35dc21f8b74e07903a2abc181d',
-            '\x805935fb7ecdd586e52fefa71770eb473f7fd5944a1777001b60c1f67a4a2b08',
-            '\xdea0edbf7f4b2ec73db8810b29059b3df93180d58ec899446a67bb587efe6e60',
-            '\x25ddf7c03a3bf193b13f633e93dd6d2a1a3df942b76a3aa19bc3887ff1125e56'
-        )
+        erc721."from" <> '\x0000000000000000000000000000000000000000' 
         AND trades.evt_block_time >= start_ts
         AND trades.evt_block_time < end_ts
     ON CONFLICT DO NOTHING
