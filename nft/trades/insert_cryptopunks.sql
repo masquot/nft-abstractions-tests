@@ -45,7 +45,7 @@ WITH rows AS (
         trades.value / 10 ^ 18 AS original_amount,
         trades.value AS original_amount_raw,
         'ETH' AS original_currency,
-        '\x0000000000000000000000000000000000000000' AS original_currency_contract,
+        '\x0000000000000000000000000000000000000000'::bytea AS original_currency_contract,
         '\xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'::bytea AS currency_contract,
         trades.contract_address AS nft_contract_address,
         trades.contract_address AS exchange_contract_address,
