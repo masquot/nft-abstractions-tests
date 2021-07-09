@@ -34,7 +34,7 @@ WITH rows AS (
     SELECT
         trades.evt_block_time AS block_time,
         'CryptoPunks' AS nft_project_name,
-        trades."punkIndex" AS nft_token_id,
+        CAST(trades."punkIndex" AS TEXT) AS nft_token_id,
         'LarvaLabs Contract' AS platform,
         '1' AS platform_version,
         'Buy' AS category,

@@ -33,7 +33,7 @@ WITH rows AS (
 
     SELECT
         trades.evt_block_time AS block_time,
-        labels.get(created."nftContract", 'owner', 'project') AS nft_project_name, -- :todo: nft.name
+        tokens.name AS nft_project_name,
         CAST(created."tokenId" AS TEXT) AS nft_token_id,
         'Foundation' AS platform,
         '1' AS platform_version,
@@ -58,13 +58,14 @@ WITH rows AS (
         row_number() OVER (PARTITION BY 4, 18, 23, 6) AS trade_id -- :todo: :peer-review: (PARTITION BY platform, tx_hash, evt_index, category)
     FROM
         foundation."market_evt_ReserveAuctionFinalized" trades
-    LEFT JOIN foundation."market_evt_ReserveAuctionCreated" created ON trades."auctionId" = created."auctionId"
     INNER JOIN ethereum.transactions tx
         ON trades.evt_tx_hash = tx.hash
         AND tx.block_time >= start_ts
         AND tx.block_time < end_ts
         AND tx.block_number >= start_block
         AND tx.block_number < end_block
+    LEFT JOIN foundation."market_evt_ReserveAuctionCreated" created ON trades."auctionId" = created."auctionId"
+    LEFT JOIN nft.tokens tokens ON tokens.contract_address = created."nftContract"
     LEFT JOIN prices.usd p ON p.minute = date_trunc('minute', trades.evt_block_time)
         AND p.contract_address = '\xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
         AND p.minute >= start_ts

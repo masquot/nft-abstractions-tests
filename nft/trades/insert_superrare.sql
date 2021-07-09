@@ -152,7 +152,7 @@ rows AS (
     )
     SELECT
 	trades.block_time,
-	labels.get(COALESCE(erc721.contract_address, erc20.contract_address), 'owner', 'project') AS nft_project_name, -- :todo: nft.name
+    tokens.name AS nft_project_name,
 	trades.token_id AS nft_token_id,
 	'SuperRare' AS platform,
 	trades.platform_version,
@@ -189,6 +189,7 @@ rows AS (
         AND p.minute < end_ts
     LEFT JOIN erc721."ERC721_evt_Transfer" erc721 ON trades.tx_hash = erc721.evt_tx_hash
     LEFT JOIN erc20."ERC20_evt_Transfer" erc20 ON trades.tx_hash = erc20.evt_tx_hash
+    LEFT JOIN nft.tokens tokens ON tokens.contract_address = COALESCE(erc721.contract_address, erc20.contract_address)
     WHERE category IN ('Buy','Offer Accepted','Auction Settled')
     AND trades.block_time >= start_ts
     AND trades.block_time < end_ts

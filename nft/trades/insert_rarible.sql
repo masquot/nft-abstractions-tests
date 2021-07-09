@@ -257,7 +257,7 @@ rows AS (
 
     SELECT
         trades.evt_block_time AS block_time,
-        labels.get(trades.nft_contract_address, 'owner', 'project') AS nft_project_name,
+        tokens.name AS nft_project_name,
         trades.nft_token_id,
         trades.platform,
         trades.platform_version,
@@ -278,7 +278,8 @@ rows AS (
         tx."from" AS tx_from,
         tx."to" AS tx_to,
         NULL::integer[] AS trace_address,
-        trades.evt_index
+        trades.evt_index,
+        row_number() OVER (PARTITION BY 4, 18, 23, 6) AS trade_id -- (PARTITION BY platform, tx_hash, evt_index, category)
     FROM
         all_data trades
     INNER JOIN ethereum.transactions tx
@@ -288,6 +289,7 @@ rows AS (
         AND tx.block_number >= start_block
         AND tx.block_number < end_block
     LEFT JOIN erc20.tokens erc20 ON erc20.contract_address = trades.currency_contract
+    LEFT JOIN nft.tokens tokens ON tokens.contract_address = trades.nft_contract_address
     LEFT JOIN prices.usd p ON p.minute = date_trunc('minute', trades.evt_block_time)
         AND p.contract_address = trades.currency_contract
         AND p.minute >= start_ts

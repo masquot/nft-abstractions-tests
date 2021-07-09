@@ -59,7 +59,7 @@ rows AS (
 
     SELECT
         trades.evt_block_time AS block_time,
-        labels.get(wc.nft_contract_address, 'owner', 'project') AS nft_project_name, -- :todo: nft.name
+        tokens.name AS nft_project_name,
         token_id AS nft_token_id,
         'OpenSea' AS platform,
         '1' AS platform_version,
@@ -81,7 +81,7 @@ rows AS (
         tx."to" AS tx_to,
         call_trace_address AS trace_address,
         trades.evt_index,
-        row_number() OVER (PARTITION BY 4, 18, 23, 6) AS trade_id -- :todo: :peer-review: (PARTITION BY platform, tx_hash, evt_index, category)
+        row_number() OVER (PARTITION BY 4, 18, 23, 6) AS trade_id -- (PARTITION BY platform, tx_hash, evt_index, category)
     FROM
         opensea."WyvernExchange_evt_OrdersMatched" trades
     INNER JOIN ethereum.transactions tx
@@ -91,6 +91,7 @@ rows AS (
         AND tx.block_number >= start_block
         AND tx.block_number < end_block
     LEFT JOIN wyvern_calldata wc ON wc.call_tx_hash = trades.evt_tx_hash
+    LEFT JOIN nft.tokens tokens ON tokens.contract_address = wc.nft_contract_address
     LEFT JOIN prices.usd p ON p.minute = date_trunc('minute', trades.evt_block_time)
         AND p.contract_address = wc.currency_token
         AND p.minute >= start_ts
